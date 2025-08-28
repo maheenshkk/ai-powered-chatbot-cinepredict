@@ -1,0 +1,18 @@
+.bot-message, .user-message {
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    border-radius: 0.75rem;
+    max-width: 80%;
+}
+
+.bot-message {
+    background-color: #e5e7eb;
+    margin-right: 1rem;
+}
+
+.user-message {
+    background-color: #3b82f6;
+    color: white;
+    margin-left: auto;
+    margin-right: 1rem;
+}

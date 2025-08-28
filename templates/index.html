@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CinePredict - Movie Recommendation Chatbot</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0f0f 0%, #1a1a2e 50%, #16213e 100%);
+            color: #ffffff;
+            min-height: 100vh;
+        }
+
+        .header {
+            text-align: center;
+            padding: 2rem 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            color: #b8b8b8;
+        }
+
+        .movies-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .movie-card {
+            position: relative;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .movie-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .movie-poster {
+            width: 100%;
+            height: 400px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .movie-poster img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .movie-card:hover .movie-poster img {
+            transform: scale(1.05);
+        }
+
+        .movie-poster::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, 
+                rgba(255, 107, 107, 0.1), 
+                rgba(78, 205, 196, 0.1), 
+                rgba(69, 183, 209, 0.1));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 1;
+        }
+
+        .movie-card:hover .movie-poster::before {
+            opacity: 1;
+        }
+
+        .movie-info {
+            padding: 1.5rem;
+        }
+
+        .movie-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: #ffffff;
+        }
+
+        .movie-genre {
+            color: #4ecdc4;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .movie-year {
+            color: #b8b8b8;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .movie-rating {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            color: white;
+            padding: 0.3rem 0.8rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 1rem;
+        }
+
+        .movie-description {
+            color: #cccccc;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Floating Chat Button */
+        .floating-chat-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.4);
+            z-index: 100;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 8px 25px rgba(255, 107, 107, 0.4); }
+            50% { box-shadow: 0 8px 35px rgba(255, 107, 107, 0.7); }
+            100% { box-shadow: 0 8px 25px rgba(255, 107, 107, 0.4); }
+        }
+
+        .floating-chat-btn:hover {
+            transform: scale(1.1);
+            animation: none;
+            box-shadow: 0 12px 35px rgba(255, 107, 107, 0.6);
+        }
+
+        .floating-chat-btn svg {
+            width: 32px;
+            height: 32px;
+            fill: white;
+        }
+
+        .chat-tooltip {
+            position: absolute;
+            right: 80px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .floating-chat-btn:hover .chat-tooltip {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .chatbot-sidebar {
+            position: fixed;
+            top: 0;
+            right: -450px;
+            width: 450px;
+            height: 100vh;
+            background: rgba(20, 20, 30, 0.95);
+            backdrop-filter: blur(20px);
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            transition: right 0.3s ease;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chatbot-sidebar.open {
+            right: 0;
+        }
+
+        .chat-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(45deg, rgba(255, 107, 107, 0.1), rgba(78, 205, 196, 0.1));
+        }
+
+        .chat-header h3 {
+            color: #4ecdc4;
+            font-size: 1.3rem;
+        }
+
+        .chat-status {
+            color: #888;
+            font-size: 0.8rem;
+            margin-top: 0.2rem;
+        }
+
+        .close-chat {
+            background: none;
+            border: none;
+            color: #ffffff;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 50%;
+            transition: background 0.3s ease;
+        }
+
+        .close-chat:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 1rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 1rem 1.2rem;
+            border-radius: 20px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+
+        .message.bot {
+            align-self: flex-start;
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom-left-radius: 5px;
+        }
+
+        .typing-indicator {
+            align-self: flex-start;
+            padding: 1rem 1.2rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            border-bottom-left-radius: 5px;
+            display: none;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 0.3rem;
+        }
+
+        .typing-dots span {
+            width: 8px;
+            height: 8px;
+            background: #4ecdc4;
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-10px); }
+        }
+
+        .chat-input-container {
+            padding: 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            gap: 0.8rem;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 1rem 1.2rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 25px;
+            color: #ffffff;
+            font-size: 0.95rem;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .chat-input:focus {
+            border-color: #4ecdc4;
+            box-shadow: 0 0 0 2px rgba(78, 205, 196, 0.2);
+        }
+
+        .chat-input::placeholder {
+            color: #888;
+        }
+
+        .send-button {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .send-button:hover {
+            transform: scale(1.05);
+        }
+
+        .send-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .send-button svg {
+            width: 24px;
+            height: 24px;
+            fill: white;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        @media (max-width: 768px) {
+            .chatbot-sidebar {
+                width: 100%;
+                right: -100%;
+            }
+
+            .floating-chat-btn {
+                width: 60px;
+                height: 60px;
+                bottom: 20px;
+                right: 20px;
+            }
+
+            .movies-container {
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 1rem;
+                padding: 1rem;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .chat-tooltip {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>CinePredict</h1>
+        <p>Discover your next favorite movie with AI-powered recommendations</p>
+    </div>
+
+    <div class="movies-container">
+        <div class="movie-card">
+            <div class="movie-poster">
+                <img src="https://m.media-amazon.com/images/M/MV5BNzQzOTk3OTAtNDQ0Zi00ZTVkLWI0MTEtMDllZjNkYzNjNTc4L2ltYWdlXkEyXkFqcGdeQXVyNjU0OTQ0OTY@._V1_SX300.jpg" alt="The Matrix Poster" loading="lazy">
+            </div>
+            <div class="movie-info">
+                <div class="movie-title">The Matrix</div>
+                <div class="movie-genre">Sci-Fi • Action</div>
+                <div class="movie-year">1999</div>
+                <div class="movie-rating">★ 8.7</div>
+                <div class="movie-description">A computer programmer discovers reality as he knows it is actually a simulation, and joins a rebellion to free humanity.</div>
+            </div>
+        </div>
+
+        <div class="movie-card">
+            <div class="movie-poster">
+                <img src="https://m.media-amazon.com/images/M/MV5BMjAxMzY3NjcxNF5BMl5BanBnXkFtZTcwNTI5OTM0Mw@@._V1_SX300.jpg" alt="Inception Poster" loading="lazy">
+            </div>
+            <div class="movie-info">
+                <div class="movie-title">Inception</div>
+                <div class="movie-genre">Sci-Fi • Thriller</div>
+                <div class="movie-year">2010</div>
+                <div class="movie-rating">★ 8.8</div>
+                <div class="movie-description">A thief who steals corporate secrets through dream-sharing technology is given the task of planting an idea into a CEO's mind.</div>
+            </div>
+        </div>
+
+        <div class="movie-card">
+            <div class="movie-poster">
+                <img src="https://m.media-amazon.com/images/M/MV5BZjdkOTU3MDktN2IxOS00OGEyLWFmMjktY2FiMmZkNWIyODZiXkEyXkFqcGdeQXVyMTMxODk2OTU@._V1_SX300.jpg" alt="Interstellar Poster" loading="lazy">
+            </div>
+            <div class="movie-info">
+                <div class="movie-title">Interstellar</div>
+                <div class="movie-genre">Sci-Fi • Drama</div>
+                <div class="movie-year">2014</div>
+                <div class="movie-rating">★ 8.6</div>
+                <div class="movie-description">A team of explorers travel through a wormhole in space in an attempt to ensure humanity's survival.</div>
+            </div>
+        </div>
+
+        <div class="movie-card">
+            <div class="movie-poster">
+                <img src="https://m.media-amazon.com/images/M/MV5BNGNhMDIzZTUtNTBlZi00MTRlLWFjM2ItYzViMjE3YzI5MjljXkEyXkFqcGdeQXVyNzkwMjQ5NzM@._V1_SX300.jpg" alt="Pulp Fiction Poster" loading="lazy">
+            </div>
+            <div class="movie-info">
+                <div class="movie-title">Pulp Fiction</div>
+                <div class="movie-genre">Crime • Drama</div>
+                <div class="movie-year">1994</div>
+                <div class="movie-rating">★ 8.9</div>
+                <div class="movie-description">The lives of two mob hitmen, a boxer, and others intertwine in four tales of violence and redemption.</div>
+            </div>
+        </div>
+
+        <div class="movie-card">
+            <div class="movie-poster">
+                <img src="https://m.media-amazon.com/images/M/MV5BMTMxNTMwODM0NF5BMl5BanBnXkFtZTcwODAyMTk2Mw@@._V1_SX300.jpg" alt="The Dark Knight Poster" loading="lazy">
+            </div>
+            <div class="movie-info">
+                <div class="movie-title">The Dark Knight</div>
+                <div class="movie-genre">Action • Crime</div>
+                <div class="movie-year">2008</div>
+                <div class="movie-rating">★ 9.0</div>
+                <div class="movie-description">Batman faces the Joker, a criminal mastermind who wants to plunge Gotham City into anarchy.</div>
+            </div>
+        </div>
+
+        <div class="movie-card">
+            <div class="movie-poster">
+                <img src="https://m.media-amazon.com/images/M/MV5BNWIwODRlZTUtY2U3ZS00Yzg1LWJhNzYtMmZiYmEyNmU1NjMzXkEyXkFqcGdeQXVyMTQxNzMzNDI@._V1_SX300.jpg" alt="Forrest Gump Poster" loading="lazy">
+            </div>
+            <div class="movie-info">
+                <div class="movie-title">Forrest Gump</div>
+                <div class="movie-genre">Drama • Romance</div>
+                <div class="movie-year">1994</div>
+                <div class="movie-rating">★ 8.8</div>
+                <div class="movie-description">The story of a man with low IQ who accomplishes great things and influences popular culture.</div>
+            </div>
+        </div>
+
+        <div class="movie-card">
+            <div class="movie-poster">
+                <img src="https://m.media-amazon.com/images/M/MV5BMTc5MDE2ODcwNV5BMl5BanBnXkFtZTgwMzI2NzQ2NzM@._V1_SX300.jpg" alt="Avengers: Endgame Poster" loading="lazy">
+            </div>
+            <div class="movie-info">
+                <div class="movie-title">Avengers: Endgame</div>
+                <div class="movie-genre">Action • Adventure</div>
+                <div class="movie-year">2019</div>
+                <div class="movie-rating">★ 8.4</div>
+                <div class="movie-description">The surviving Avengers assemble once more to reverse Thanos' actions and restore balance to the universe.</div>
+            </div>
+        </div>
+
+        <div class="movie-card">
+            <div class="movie-poster">
+                <img src="https://m.media-amazon.com/images/M/MV5BYWZjMjdjZGUtOWEwZS00Y2ExLTljZWQtMjViOTEzODYyNzMzXkEyXkFqcGdeQXVyODkzNTgxMDg@._V1_SX300.jpg" alt="Parasite Poster" loading="lazy">
+            </div>
+            <div class="movie-info">
+                <div class="movie-title">Parasite</div>
+                <div class="movie-genre">Thriller • Drama</div>
+                <div class="movie-year">2019</div>
+                <div class="movie-rating">★ 8.5</div>
+                <div class="movie-description">A poor family schemes to become employed by a wealthy family by infiltrating their household.</div>
+            </div>
+        </div>
+
+        <div class="movie-card">
+            <div class="movie-poster">
+                <img src="https://m.media-amazon.com/images/M/MV5BM2MyNjYxNmUtYTAwNi00MTYxLWJmNWYtYzZlODY3ZTk3OTFlXkEyXkFqcGdeQXVyNzkwMjQ5NzM@._V1_SX300.jpg" alt="The Godfather Poster" loading="lazy">
+            </div>
+            <div class="movie-info">
+                <div class="movie-title">The Godfather</div>
+                <div class="movie-genre">Crime • Drama</div>
+                <div class="movie-year">1972</div>
+                <div class="movie-rating">★ 9.2</div>
+                <div class="movie-description">The aging patriarch of an organized crime dynasty transfers control to his reluctant son.</div>
+            </div>
+        </div>
+
+        <div class="movie-card">
+            <div class="movie-poster">
+                <img src="https://m.media-amazon.com/images/M/MV5BMjlmZmI5MDctNDE2YS00YWE0LWE5ZWItZDBhYWQ0NTcxNWRhXkEyXkFqcGdeQXVyMTMxODk2OTU@._V1_SX300.jpg" alt="Spirited Away Poster" loading="lazy">
+            </div>
+            <div class="movie-info">
+                <div class="movie-title">Spirited Away</div>
+                <div class="movie-genre">Animation • Family</div>
+                <div class="movie-year">2001</div>
+                <div class="movie-rating">★ 9.3</div>
+                <div class="movie-description">A young girl enters a world ruled by gods and witches where humans are changed into beasts.</div>
+            </div>
+        </div>
+
+        <div class="movie-card">
+            <div class="movie-poster">
+                <img src="https://m.media-amazon.com/images/M/MV5BNGVjNWI4ZGUtNzE0MS00YTJmLWE0ZDctN2ZiYTk2YmI3NTYyXkEyXkFqcGdeQXVyMTkxNjUyNQ@@._V1_SX300.jpg" alt="Joker Poster" loading="lazy">
+            </div>
+            <div class="movie-info">
+                <div class="movie-title">Joker</div>
+                <div class="movie-genre">Crime • Drama</div>
+                <div class="movie-year">2019</div>
+                <div class="movie-rating">★ 8.4</div>
+                <div class="movie-description">A failed comedian's descent into madness leads him to become an icon of chaos in Gotham City.</div>
+            </div>
+        </div>
+
+        <div class="movie-card">
+            <div class="movie-poster">
+                <img src="https://m.media-amazon.com/images/M/MV5BZDA0OGQxNTItMDZkMC00N2UyLTg3MzMtYTJmNjg3Nzk5MzRiXkEyXkFqcGdeQXVyMjUzOTY0NTM@._V1_SX300.jpg" alt="Avatar Poster" loading="lazy">
+            </div>
+            <div class="movie-info">
+                <div class="movie-title">Avatar</div>
+                <div class="movie-genre">Sci-Fi • Adventure</div>
+                <div class="movie-year">2009</div>
+                <div class="movie-rating">★ 7.9</div>
+                <div class="movie-description">A marine on an alien planet becomes torn between following orders and protecting the world he feels is his home.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Chat Button -->
+    <button class="floating-chat-btn" onclick="openChat()">
+        <div class="chat-tooltip">Get Movie Recommendations!</div>
+        <svg viewBox="0 0 24 24">
+            <path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h4l4 4 4-4h4c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/>
+        </svg>
+    </button>
+
+    <div class="overlay" id="overlay" onclick="closeChat()"></div>
+
+    <div class="chatbot-sidebar" id="chatSidebar">
+        <div class="chat-header">
+            <div>
+                <h3>🎬 CinePredict AI</h3>
+                <div class="chat-status" id="chatStatus">Ready to help</div>
+            </div>
+            <button class="close-chat" onclick="closeChat()">&times;</button>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+            <div class="message bot">
+                Hi! I'm your AI movie recommendation assistant. I can help you find movies based on:
+                <br><br>
+                🎭 <strong>Story descriptions</strong> - Tell me what kind of story you're looking for
+                <br>
+                🎪 <strong>Genre & rating</strong> - Specify your favorite genres and minimum ratings
+                <br><br>
+                What would you like to explore today?
+            </div>
+        </div>
+        <div class="typing-indicator" id="typingIndicator">
+            <div class="typing-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        <div class="chat-input-container">
+            <input type="text" class="chat-input" id="chatInput" placeholder="Describe a story or ask for recommendations..." onkeypress="handleKeyPress(event)">
+            <button class="send-button" id="sendButton" onclick="sendMessage()">
+                <svg viewBox="0 0 24 24">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let userId = 'user_' + Math.random().toString(36).substr(2, 9);
+        let isWaitingForResponse = false;
+
+        function openChat() {
+            document.getElementById('chatSidebar').classList.add('open');
+            document.getElementById('overlay').classList.add('active');
+            document.getElementById('chatInput').focus();
+        }
+
+        function closeChat() {
+            document.getElementById('chatSidebar').classList.remove('open');
+            document.getElementById('overlay').classList.remove('active');
+        }
+
+        function addMessage(text, sender) {
+            const messagesContainer = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            messageDiv.innerHTML = text;
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function showTypingIndicator() {
+            document.getElementById('typingIndicator').style.display = 'block';
+            document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+        }
+
+        function hideTypingIndicator() {
+            document.getElementById('typingIndicator').style.display = 'none';
+        }
+
+        function updateChatStatus(status) {
+            document.getElementById('chatStatus').textContent = status;
+        }
+
+        function setButtonState(disabled) {
+            const sendButton = document.getElementById('sendButton');
+            const chatInput = document.getElementById('chatInput');
+            sendButton.disabled = disabled;
+            chatInput.disabled = disabled;
+            isWaitingForResponse = disabled;
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (message && !isWaitingForResponse) {
+                addMessage(message, 'user');
+                input.value = '';
+                
+                setButtonState(true);
+                showTypingIndicator();
+                updateChatStatus('Processing...');
+
+                try {
+                    const response = await fetch('/chat', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            user_id: userId,
+                            message: message
+                        })
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        hideTypingIndicator();
+                        addMessage(data.response, 'bot');
+                        updateChatStatus('Ready to help');
+                    } else {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    hideTypingIndicator();
+                    addMessage('Sorry, I encountered an error. Please try again or check if the server is running.', 'bot');
+                    updateChatStatus('Connection error');
+                }
+
+                setButtonState(false);
+            }
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !isWaitingForResponse) {
+                sendMessage();
+            }
+        }
+
+        // Close chat with Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeChat();
+            }
+        });
+
+        // Auto-focus input when chat opens
+        document.getElementById('chatSidebar').addEventListener('transitionend', function(e) {
+            if (e.propertyName === 'right' && this.classList.contains('open')) {
+                document.getElementById('chatInput').focus();
+            }
+        });
+    </script>
+</body>
+</html>
