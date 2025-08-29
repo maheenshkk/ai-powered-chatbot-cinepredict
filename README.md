@@ -37,7 +37,7 @@ CinePredict is a Flask-based web application delivering AI-powered movie recomme
 1. **Clone the Repository**
 
    ```bash
-   git clone https://github.com/AHSAN-MEHMOOD/cinepredict.git
+   https://github.com/maheenshkk/ai-powered-chatbot-cinepredict.git
    cd cinepredict
    ```
 
